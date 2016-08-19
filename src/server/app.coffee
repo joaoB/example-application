@@ -8,9 +8,8 @@ methodOverride = require "method-override"
 bodyParser     = require "body-parser"
 socketio       = require "socket.io"
 errorHandler   = require "error-handler"
-
+net			   = require "net"
 log       = require "./lib/log"
-Generator = require "./lib/Generator"
 
 app       = express()
 server    = http.createServer app
@@ -19,15 +18,29 @@ io        = socketio.listen server
 # collection of client sockets
 sockets = []
 
-# create a generator of data
-persons = new Generator [ "first", "last", "gender", "birthday", "age", "ssn"]
+domain = 'localhost'
+port = 9001
 
-# distribute data over the websockets
-persons.on "data", (data) ->
-	data.timestamp = Date.now()
-	socket.emit "persons:create", data for socket in sockets
+ping = (socket, delay) ->
+    console.log "Pinging server"
+    socket.write "Ping"
+    nextPing = -> ping(socket, delay)
+    setTimeout nextPing, delay
 
-persons.start()
+connection = net.createConnection port, domain
+
+connection.on 'connect', () ->
+    console.log "Opened connection to #{domain}:#{port}"
+    ping connection, 2000
+
+connection.on 'data', (data) ->
+    console.log "Received: #{data}"
+
+connection.on 'end', (data) ->
+    console.log "Connection closed"
+    process.exit()
+
+
 
 # websocket connection logic
 io.on "connection", (socket) ->
