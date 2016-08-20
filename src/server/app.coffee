@@ -38,7 +38,6 @@ connection.on 'data', (data) ->
 
 connection.on 'end', (data) ->
     console.log "Connection closed"
-    process.exit()
 
 
 
