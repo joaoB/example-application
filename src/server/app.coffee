@@ -1,19 +1,19 @@
 # required modules
-_              = require "underscore"
-async          = require "async"
-http           = require "http"
-express        = require "express"
-path           = require "path"
+_			  = require "underscore"
+async		  = require "async"
+http		   = require "http"
+express		= require "express"
+path		   = require "path"
 methodOverride = require "method-override"
-bodyParser     = require "body-parser"
-socketio       = require "socket.io"
+bodyParser	 = require "body-parser"
+socketio	   = require "socket.io"
 errorHandler   = require "error-handler"
 net			   = require "net"
-log       = require "./lib/log"
+log	   = require "./lib/log"
 
-app       = express()
-server    = http.createServer app
-io        = socketio.listen server
+app	   = express()
+server	= http.createServer app
+io		= socketio.listen server
 
 # collection of client sockets
 sockets = []
@@ -22,22 +22,25 @@ domain = 'localhost'
 port = 9001
 
 ping = (socket, delay) ->
-    console.log "Pinging server"
-    socket.write "Ping"
-    nextPing = -> ping(socket, delay)
-    setTimeout nextPing, delay
+	#console.log "Pinging server"
+	socket.write "Ping"
+	nextPing = -> ping(socket, delay)
+	setTimeout nextPing, delay
 
 connection = net.createConnection port, domain
 
 connection.on 'connect', () ->
-    console.log "Opened connection to #{domain}:#{port}"
-    ping connection, 2000
+	console.log "Opened connection to #{domain}:#{port}"
+	ping connection, 4000
 
 connection.on 'data', (data) ->
-    console.log "Received: #{data}"
+	data = JSON.parse(data)
+	data.timestamp = Date.now()
+	socket.emit "persons:create", data for socket in sockets
+	#console.log "Received: #{data}"
 
 connection.on 'end', (data) ->
-    console.log "Connection closed"
+	console.log "Connection closed"
 
 
 
