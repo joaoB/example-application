@@ -20,40 +20,58 @@ sockets = []
 
 domain = 'localhost'
 port = 9001
+#are we pinging server for data?	
+pinging = false
+connection = null	
 
 ping = (socket, delay) ->
-	#console.log "Pinging server"
-	socket.write "Ping"
-	nextPing = -> ping(socket, delay)
-	setTimeout nextPing, delay
+	if pinging
+		socket.write "Ping"
+		nextPing = -> ping(socket, delay)
+		setTimeout nextPing, delay
 
-connection = net.createConnection port, domain
+establishConnection = () ->
+	connection = net.createConnection port, domain
+	bindOnData()
+	bindOnConnect()
+	bindOnEnd()
+	pinging = true
+	
+bindOnData = () ->
+	connection.on 'data', (data) ->
+		data = JSON.parse(data)
+		data.timestamp = Date.now()
+		socket.emit "persons:create", data for socket in sockets
+		console.log "Received: #{data}"
+	
+bindOnConnect = () ->
+	connection.on 'connect', () ->
+		console.log "Opened connection to #{domain}:#{port}"
+	
+bindOnEnd = () ->	
+	connection.on 'end', (data) ->
+		console.log "Connection closed"
 
-connection.on 'connect', () ->
-	console.log "Opened connection to #{domain}:#{port}"
-	ping connection, 4000
+closeConnection = () ->
+	connection.destroy()
+	connection = null
 
-connection.on 'data', (data) ->
-	data = JSON.parse(data)
-	data.timestamp = Date.now()
-	socket.emit "persons:create", data for socket in sockets
-	#console.log "Received: #{data}"
-
-connection.on 'end', (data) ->
-	console.log "Connection closed"
-
-
-
+	
 # websocket connection logic
 io.on "connection", (socket) ->
 	# add socket to client sockets
 	sockets.push socket
+	establishConnection() unless connection
+	ping connection, 4000
 	log.info "Socket connected, #{sockets.length} client(s) active"
 
 	# disconnect logic
 	socket.on "disconnect", ->
 		# remove socket from client sockets
 		sockets.splice sockets.indexOf(socket), 1
+		if sockets.length == 0
+			pinging = false
+			connection = null 
 		log.info "Socket disconnected, #{sockets.length} client(s) active"
 
 # express application middleware
@@ -73,7 +91,8 @@ app
 app
 	.get "/", (req, res, next) =>
 		res.render "main"
-
+	
+		
 # start the server
 server.listen 3000
 log.info "Listening on 3000"
