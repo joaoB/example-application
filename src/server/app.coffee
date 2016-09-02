@@ -19,10 +19,8 @@ io		= socketio.listen server
 # collection of client sockets
 sockets = []
 
-serviceFinder.ping()
-
-domain = 'localhost'
-port = 9001
+domain = null
+port = null
 #are we pinging server for data?	
 pinging = false
 connection = null	
@@ -33,12 +31,16 @@ ping = (socket, delay) ->
 		nextPing = -> ping(socket, delay)
 		setTimeout nextPing, delay
 
-establishConnection = () ->
-	connection = net.createConnection port, domain
-	bindOnData()
-	bindOnConnect()
-	bindOnEnd()
-	pinging = true
+establishConnection = (cb) ->
+	serviceFinder.getService (result) ->
+		domain = result.domain
+		port = result.port
+		connection = net.createConnection port, domain
+		bindOnData()
+		bindOnConnect()
+		bindOnEnd()
+		pinging = true
+		cb(connection)
 	
 bindOnData = () ->
 	connection.on 'data', (data) ->
@@ -64,8 +66,9 @@ closeConnection = () ->
 io.on "connection", (socket) ->
 	# add socket to client sockets
 	sockets.push socket
-	establishConnection() unless connection
-	ping connection, 4000
+	if !connection
+		establishConnection (connectionResult) -> 
+			ping connectionResult, 4000
 	log.info "Socket connected, #{sockets.length} client(s) active"
 
 	# disconnect logic
@@ -74,7 +77,7 @@ io.on "connection", (socket) ->
 		sockets.splice sockets.indexOf(socket), 1
 		if sockets.length == 0
 			pinging = false
-			connection = null 
+			closeConnection() 
 		log.info "Socket disconnected, #{sockets.length} client(s) active"
 
 # express application middleware

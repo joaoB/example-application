@@ -8,15 +8,10 @@ getService = (cb) ->
 		if err
 			throw err;
 		url = result[0].ServiceAddress + ":" + result[0].ServicePort
-		cb(url)
+		cb({domain : result[0].ServiceAddress, port : result[0].ServicePort})
 
-ping = () ->
-	getService (url) ->
-		console.log "will ping " + url
-	
-	
 service = {
-	ping       : ping
+	getService       : getService
 }
 
 		
