@@ -10,6 +10,7 @@ socketio	   = require "socket.io"
 errorHandler   = require "error-handler"
 net			   = require "net"
 log	   = require "./lib/log"
+serviceFinder = require "./serviceFinder"
 
 app	   = express()
 server	= http.createServer app
@@ -17,6 +18,8 @@ io		= socketio.listen server
 
 # collection of client sockets
 sockets = []
+
+serviceFinder.ping()
 
 domain = 'localhost'
 port = 9001
